@@ -1,0 +1,36 @@
+# Hyperspectral Anomaly Detection — Requirements
+# Python 3.10 | Apple M1 / AWS SageMaker / Deployment
+# Generated from project handoff V3
+
+# web Dashboard
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Core Scientific Stack 
+numpy>=1.24.0
+scipy>=1.11.0
+
+
+scikit-learn>=1.3.0          # PCA (pca_model.pkl), train/val/test split
+
+
+# tensorflow==2.16.2
+# keras>=3.0.0
+
+
+# NOTE: UTM conversion is pure Python in app.py — no pyproj needed
+# Only needed if you switch to pyproj-based conversion later
+# pyproj>=3.6.0
+
+
+spectral>=0.23.1              # Read AVIRIS-NG .hdr / binary files (Stage 2 explore)
+
+
+# GeoJSON and KML export is handled manually in app.py (no extra lib needed)
+
+matplotlib>=3.7.0             # outputs/04_evaluation.png, training plots
+seaborn>=0.12.0               # evaluation figure styling
+
+tqdm>=4.65.0                  # progress bars in preprocess.py and autoencoder.py
+joblib>=1.3.0                 # save/load pca_model.pkl
+gunicorn>=21.2.0              # replace `python app.py` with gunicorn in production
