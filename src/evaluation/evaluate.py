@@ -16,7 +16,6 @@ warnings.filterwarnings("ignore")
 
 
 # CONFIGURATION
-
 print("=" * 58)
 print("STAGE 5 — EVALUATION  (geometric fusion + recall-tuned)")
 print("=" * 58)
@@ -24,14 +23,14 @@ print("=" * 58)
 HDR  = "data/ang20210925t151637_rfl_v2z1.hdr"
 DATA = "data/ang20210925t151637_rfl_v2z1"
 
-LABEL_PERCENTILE  = 98    # top 2% AE  → proxy anomaly labels
+LABEL_PERCENTILE  = 98    # top 2% AE→ proxy anomaly labels
 NORMAL_RATIO      = 5     # 5 normals per anomaly in eval set
 RANDOM_SEED       = 42
-TARGET_PRECISION  = 0.45  # lowered from 0.65 → more aggressive recall
-MIN_CLUSTER_SIZE  = 3     # remove clusters smaller than this (noise filter)
+TARGET_PRECISION  = 0.70  
+MIN_CLUSTER_SIZE  = 5    # remove clusters smaller than this (noise filter)
 SPATIAL_SMOOTH    = 3     # uniform filter kernel size
 
-os.makedirs("outputs",        exist_ok=True)
+os.makedirs("outputs",exist_ok=True)
 os.makedirs("data/processed", exist_ok=True)
 
 
@@ -39,10 +38,10 @@ os.makedirs("data/processed", exist_ok=True)
 
 print("\n[1/7] Loading anomaly scores...")
 
-ae_scores       = np.load("data/processed/ae_scores.npy")
-vae_scores      = np.load("data/processed/vae_scores.npy")
+ae_scores = np.load("data/processed/ae_scores.npy")
+vae_scores = np.load("data/processed/vae_scores.npy")
 ensemble_scores = np.load("data/processed/ensemble_scores.npy")
-valid_mask      = np.load("data/processed/valid_mask.npy")
+valid_mask = np.load("data/processed/valid_mask.npy")
 
 print(f"AE scores:{ae_scores.shape}  mean={ae_scores.mean():.4f}  std={ae_scores.std():.4f}")
 print(f"VAE scores:{vae_scores.shape}  mean={vae_scores.mean():.4f}  std={vae_scores.std():.4f}")
@@ -50,8 +49,7 @@ print(f"Ensemble scores: {ensemble_scores.shape}  mean={ensemble_scores.mean():.
 print(f"Valid pixels:{valid_mask.sum():,}")
 
 
-# 3. CROSS-MODEL GROUND TRUTH
-
+#3 cross model ground truth 
 print("\n[2/7] Building cross-model ground truth...")
 
 ae_label_thresh = np.percentile(ae_scores, LABEL_PERCENTILE)
@@ -79,19 +77,19 @@ geo_eval_raw  = np.sqrt(np.abs(ae_eval_raw * vae_eval))
 g_min, g_max  = geo_eval_raw.min(), geo_eval_raw.max()
 geo_eval      = (geo_eval_raw - g_min) / (g_max - g_min + 1e-9)
 
-print(f"      AE label threshold: {ae_label_thresh:.4f}  (top {100-LABEL_PERCENTILE}%)")
-print(f"      Evaluation set:     {len(eval_idx):,} pixels")
-print(f"      Anomalies:          {y_true.sum():,} ({y_true.mean()*100:.1f}%)")
-print(f"      Normals:            {(y_true==0).sum():,}  (random, full distribution)")
-print(f"      Fusion scores:      geometric mean(AE, VAE) — normalized 0–1")
-print(f"      (Labels = AE only — VAE/Ensemble/Geo evaluated independently)")
+print(f"AE label threshold: {ae_label_thresh:.4f}  (top {100-LABEL_PERCENTILE}%)")
+print(f"Evaluation set:{len(eval_idx):,} pixels")
+print(f"Anomalies:{y_true.sum():,} ({y_true.mean()*100:.1f}%)")
+print(f"Normals:{(y_true==0).sum():,}  (random, full distribution)")
+print(f"Fusion scores: geometric mean(AE, VAE) — normalized 0–1")
+print(f"(Labels = AE only — VAE/Ensemble/Geo evaluated independently)")
 
 
-# 4. ROC-AUC + PR-AUC  (all three scorers)
+#ROC-AUC + PR-AUC  (all three scorers)
 print("\n[3/7] Computing ROC and PR curves...")
 
 auc_vae = roc_auc_score(y_true, vae_eval)
-auc_ens = roc_auc_score(y_true, ensemble_eval)
+auc_ens=roc_auc_score(y_true, ensemble_eval)
 auc_geo = roc_auc_score(y_true, geo_eval)
 
 fpr_vae, tpr_vae, _ = roc_curve(y_true, vae_eval)
@@ -113,14 +111,14 @@ pr_lift_ens = pr_auc_ens / pr_baseline
 pr_lift_geo = pr_auc_geo / pr_baseline
 
 print(f"ROC-AUC — VAE:{auc_vae:.4f}  ← primary (fully independent of labels)")
-print(f"ROC-AUC — Ensemble: {auc_ens:.4f}  (informational — 40% AE signal)")
-print(f"ROC-AUC — Geo-Mean: {auc_geo:.4f}  (geometric fusion — used for thresholding)")
-print(f"PR-AUC  — VAE:{pr_auc_vae:.4f}  ({pr_lift_vae:.2f}× random {pr_baseline:.3f})")
-print(f"PR-AUC  — Ensemble: {pr_auc_ens:.4f}  ({pr_lift_ens:.2f}× random)")
-print(f"PR-AUC  — Geo-Mean: {pr_auc_geo:.4f}  ({pr_lift_geo:.2f}× random)")
+print(f"ROC-AUC — Ensemble: {auc_ens:.4f} (informational — 40% AE signal)")
+print(f"ROC-AUC — Geo-Mean: {auc_geo:.4f} (geometric fusion — used for thresholding)")
+print(f"PR-AUC— VAE:{pr_auc_vae:.4f}  ({pr_lift_vae:.2f}× random {pr_baseline:.3f})")
+print(f"PR-AUC — Ensemble: {pr_auc_ens:.4f} ({pr_lift_ens:.2f}× random)")
+print(f"PR-AUC — Geo-Mean: {pr_auc_geo:.4f} ({pr_lift_geo:.2f}× random)")
 
 
-# 5. THRESHOLD — precision-constrained on geo_eval
+#5 THRESHOLD — precision-constrained on geo_eval
 print("\n[4/7] Finding precision-constrained threshold on geometric fusion scores...")
 
 # Precision-constrained: highest recall where precision >= TARGET_PRECISION
@@ -165,7 +163,7 @@ print(f"TP={tp}  FP={fp}  TN={tn}  FN={fn}")
 spatial_threshold = np.percentile(ensemble_scores, 95)
 
 
-# 6. SPATIAL HEATMAP — geometric fusion + smoothing + cluster filter
+# SPATIAL HEATMAP — geometric fusion + smoothing + cluster filter
 print("\n[5/7] Building spatial heatmap (geometric fusion + noise filtering)...")
 
 img = envi.open(HDR, DATA)
@@ -188,7 +186,7 @@ vae_full_map = np.full((rows, cols), np.nan)
 ae_full_map[test_coords[:,0],  test_coords[:,1]] = ae_scores
 vae_full_map[test_coords[:,0], test_coords[:,1]] = vae_scores
 
-# ── Geometric mean fusion on spatial maps ─────────────────────────────────
+# Geometric mean fusion on spatial maps
 # sqrt(AE * VAE) — amplifies agreement, suppresses single-model spikes
 geo_raw = np.sqrt(np.abs(ae_full_map * vae_full_map))
 valid_region = ~np.isnan(ae_full_map)
@@ -197,7 +195,7 @@ gmax = np.nanmax(geo_raw)
 geo_norm = np.full((rows, cols), np.nan)
 geo_norm[valid_region] = (geo_raw[valid_region] - gmin) / (gmax - gmin + 1e-9)
 
-# ── Spatial smoothing ─────────────────────────────────────────────────────
+#spatial smoothing 
 score_map_smooth               = geo_norm.copy()
 score_map_smooth[valid_region] = uniform_filter(
     np.nan_to_num(geo_norm, nan=0.0), size=SPATIAL_SMOOTH)[valid_region]
@@ -206,12 +204,12 @@ score_map_smooth[valid_region] = uniform_filter(
 score_map = np.full((rows, cols), np.nan)
 score_map[test_coords[:,0], test_coords[:,1]] = ensemble_scores
 
-# Spatial threshold on smoothed geo scores
+# spatial threshold on smoothed geo scores
 geo_spatial_threshold = np.percentile(
     score_map_smooth[valid_region], 95)
 anomaly_raw = score_map_smooth >= geo_spatial_threshold
 
-# ── Cluster size filter ───────────────────────────────────────────────────
+# cluster size filter 
 labeled_map, n_clusters = scipy_label(anomaly_raw)
 cluster_sizes = np.bincount(labeled_map.ravel())
 anomaly_map = anomaly_raw.copy()
@@ -232,10 +230,9 @@ np.save("data/processed/score_map_smooth.npy", score_map_smooth)
 np.save("data/processed/anomaly_map.npy",anomaly_map)
 
 
-# 7. GEOJSON EXPORT
+# 7 GEOJSON EXPORT
 
 print("\n[6/7] Exporting GeoJSON...")
-
 use_geo = False
 try:
     meta     = img.metadata
@@ -255,8 +252,8 @@ anomaly_pixels = np.argwhere(anomaly_map)
 features = []
 for (r, c) in anomaly_pixels[:5000]:
     score = float(score_map_smooth[r, c])
-    lon   = (ul_x + c * pixel_x) if use_geo else float(c)
-    lat   = (ul_y - r * pixel_y) if use_geo else float(r)
+    lon= (ul_x + c * pixel_x) if use_geo else float(c)
+    lat= (ul_y - r * pixel_y) if use_geo else float(r)
     features.append({
         "type": "Feature",
         "geometry": {"type": "Point", "coordinates": [lon, lat]},
@@ -264,14 +261,12 @@ for (r, c) in anomaly_pixels[:5000]:
             "row":   int(r),
             "col":   int(c),
             "score": round(score, 4),
-            "ensemble_score": round(float(score_map[r, c]) if not np.isnan(score_map[r, c]) else 0.0, 4)
-        }
-    })
+            "ensemble_score": round(float(score_map[r, c]) if not np.isnan(score_map[r, c]) else 0.0, 4)}})
 
 geojson = {"type": "FeatureCollection", "features": features}
 with open("outputs/anomalies.geojson", "w") as f:
     json.dump(geojson, f)
-print(f"      GeoJSON saved → outputs/anomalies.geojson ({len(features)} points)")
+print(f"GeoJSON saved → outputs/anomalies.geojson ({len(features)} points)")
 
 metrics = {
     "methodology": (
@@ -280,8 +275,8 @@ metrics = {
         "VAE evaluated independently (primary metric). "
         f"Geometric mean fusion (sqrt(AE*VAE)) used for thresholding. "
         f"Threshold: precision >= {TARGET_PRECISION} (recall-tuned). "
-        f"Spatial post-processing: {SPATIAL_SMOOTH}x smooth + cluster >= {MIN_CLUSTER_SIZE}px."
-    ),
+        f"Spatial post-processing: {SPATIAL_SMOOTH}x smooth + cluster >= {MIN_CLUSTER_SIZE}px."),
+
     "ROC_AUC_VAE":          round(float(auc_vae), 4),
     "ROC_AUC_Ensemble":     round(float(auc_ens), 4),
     "ROC_AUC_GeoMean":      round(float(auc_geo), 4),
@@ -301,11 +296,10 @@ metrics = {
     "TP": int(tp), "FP": int(fp), "TN": int(tn), "FN": int(fn),
     "anomaly_pixels_raw":      int(np.nansum(anomaly_raw)),
     "anomaly_pixels_filtered": int(np.nansum(anomaly_map)),
-    "noise_pixels_removed":    int(removed_pixels),
-}
+    "noise_pixels_removed":    int(removed_pixels),}
 with open("outputs/metrics.json", "w") as f:
     json.dump(metrics, f, indent=2)
-print("      Metrics saved → outputs/metrics.json")
+print(" Metrics saved → outputs/metrics.json")
 
 
 # 8. PLOTS
@@ -315,14 +309,14 @@ fig = plt.figure(figsize=(22, 14))
 fig.suptitle("AVIRIS-NG Hyperspectral — Stage 5 Evaluation", fontsize=17, fontweight="bold", y=0.99)
 gs  = gridspec.GridSpec(2, 3, figure=fig, hspace=0.42, wspace=0.32)
 
-ax_roc  = fig.add_subplot(gs[0, 0])
-ax_bar  = fig.add_subplot(gs[0, 1])
-ax_cm   = fig.add_subplot(gs[0, 2])
-ax_heat = fig.add_subplot(gs[1, 0])
-ax_pr   = fig.add_subplot(gs[1, 1])
+ax_roc= fig.add_subplot(gs[0, 0])
+ax_bar  =fig.add_subplot(gs[0, 1])
+ax_cm = fig.add_subplot(gs[0, 2])
+ax_heat =fig.add_subplot(gs[1, 0])
+ax_pr = fig.add_subplot(gs[1, 1])
 ax_dist = fig.add_subplot(gs[1, 2])
 
-# ── Plot 1: ROC Curves ──────────────────
+#Plot 1: ROC Curves 
 ax_roc.plot(fpr_vae, tpr_vae, color="darkorange",  linewidth=2.5,
             label=f"VAE  AUC={auc_vae:.3f}  ← primary")
 ax_roc.plot(fpr_geo, tpr_geo, color="royalblue",   linewidth=2.5, linestyle="-.",
@@ -336,7 +330,7 @@ ax_roc.set_xlabel("False Positive Rate (PFAR)")
 ax_roc.set_ylabel("True Positive Rate (Detection Rate)")
 ax_roc.legend(fontsize=8);  ax_roc.grid(True, alpha=0.3)
 
-# ── Plot 2: Metrics Bar ─────────────────
+#plot 2: metrics bar 
 m_names  = ["ROC-AUC\nVAE", "PR-AUC\nVAE", "F1\nScore", "Precision", "Recall"]
 m_values = [auc_vae, pr_auc_vae, f1, precision, recall]
 m_colors = ["#2ecc71" if v >= 0.8 else "#f39c12" if v >= 0.5 else "#e74c3c"
@@ -356,7 +350,7 @@ for bar, val in zip(bars, m_values):
     ax_bar.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.025,
                 f"{val:.3f}", ha="center", va="bottom", fontsize=9, fontweight="bold")
 
-# ── Plot 3: Confusion Matrix ────────────
+#plot 3: confusion matrix 
 cm_disp = np.array([[tn, fp], [fn, tp]])
 im = ax_cm.imshow(cm_disp, interpolation="nearest", cmap=plt.cm.Blues)
 ax_cm.set_title("Confusion Matrix", fontweight="bold")
@@ -370,7 +364,7 @@ plt.colorbar(im, ax=ax_cm)
 ax_cm.set_xlabel(
     f"Precision={precision:.3f}  Recall={recall:.3f}  PFAR={pfar:.3f}", fontsize=9)
 
-# ── Plot 4: Spatial Heatmap (geo-mean smoothed) ──
+#Plot 4:spatial Heatmap (geo-mean smoothed) 
 step= 4
 valid_rows = valid_mask.shape[0]
 heat_sub= score_map_smooth[::step, ::step]
@@ -387,7 +381,7 @@ ax_heat.text(0.02, 0.96, f"Covers rows 0–{valid_rows} / {rows}",
              transform=ax_heat.transAxes, fontsize=7.5, color="yellow",
              va="top", bbox=dict(boxstyle="round,pad=0.2", fc="black", alpha=0.5))
 
-# ── Plot 5: Precision-Recall Curves ──────
+# Plot 5: precision-recall curves 
 ax_pr.plot(rec_vae, prec_vae, color="darkorange", linewidth=2.5,
            label=f"VAE  PR-AUC={pr_auc_vae:.3f}  ({pr_lift_vae:.1f}× random)")
 ax_pr.plot(rec_geo, prec_geo, color="royalblue",  linewidth=2.5, linestyle="-.",
@@ -406,8 +400,7 @@ ax_pr.legend(fontsize=7.5);  ax_pr.grid(True, alpha=0.3)
 # ── Plot 6: Score Distribution + F1 inset
 ax_dist.hist(
     score_map_smooth[valid_region & ~np.isnan(score_map_smooth)],
-    bins=200, color="royalblue", alpha=0.72, label="Geo-Mean scores (test)"
-)
+    bins=200, color="royalblue", alpha=0.72, label="Geo-Mean scores (test)")
 ax_dist.axvline(x=geo_spatial_threshold, color="crimson",   linestyle="--", linewidth=2,
                 label=f"Spatial threshold = {geo_spatial_threshold:.3f}")
 ax_dist.axvline(x=threshold_pc,          color="blue",      linestyle=":",  linewidth=2,
@@ -434,14 +427,14 @@ plt.show()
 print("Saved → outputs/04_evaluation.png")
 
 
-# 9.Summary 
+# 9 Summary 
+
 
 print("\n" + "=" * 58)
 print("Stage 5 Complete ✅")
 print("=" * 58)
 print("\n=== PRIMARY METRICS ===")
-print(
-    f"ROC-AUC (VAE): {auc_vae:.4f} "
+print(f"ROC-AUC (VAE): {auc_vae:.4f} "
     f"{'✅' if auc_vae >= 0.80 else '⚠️'} "
     f"(fully label-independent)")
 
@@ -501,3 +494,4 @@ print("outputs/anomalies.geojson")
 print("data/processed/score_map.npy")
 print("data/processed/score_map_smooth.npy")
 print("data/processed/anomaly_map.npy")
+

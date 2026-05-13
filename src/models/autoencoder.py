@@ -46,12 +46,10 @@ with open("models/pca_model.pkl", "wb") as f:
 print("PCA model saved → models/pca_model.pkl")
 
 
-# 3. BUILD AUTOENCODER (definition kept, training skipped)
+# 3 BUILD AUTOENCODER (definition kept, training skipped)
 print("\n[2/5] Building Autoencoder...")
-
-
 def build_autoencoder(input_dim, latent_dim):
-    # ── Encoder ──
+    # encoder 
     encoder_input = keras.Input(shape=(input_dim,), name="encoder_input")
     x = layers.Dense(128, activation="relu")(encoder_input)
     x = layers.BatchNormalization()(x)
@@ -61,7 +59,7 @@ def build_autoencoder(input_dim, latent_dim):
     x = layers.Dropout(0.1)(x)
     x = layers.Dense(32, activation="relu")(x)
     encoded = layers.Dense(latent_dim, activation="relu", name="latent")(x)
-    # ── Decoder ──
+    # decoder
     x = layers.Dense(32, activation="relu")(encoded)
     x = layers.BatchNormalization()(x)
     x = layers.Dense(64, activation="relu")(x)
@@ -77,14 +75,13 @@ def build_autoencoder(input_dim, latent_dim):
 
 
 
-# 4. BUILD VAE (custom model class)
+# 4 BUILD VAE (custom model class)
 print("\n[3/5] Building VAE...")
-
 
 class VAE(keras.Model):
     def __init__(self, input_dim, latent_dim, **kwargs):
         super().__init__(**kwargs)
-        # ── Encoder ──
+        # Encoder
         self.enc1 = layers.Dense(128, activation="relu")
         self.enc_bn1 = layers.BatchNormalization()
         self.enc2 = layers.Dense(64, activation="relu")
@@ -92,7 +89,7 @@ class VAE(keras.Model):
         self.enc3 = layers.Dense(32, activation="relu")
         self.mu_layer = layers.Dense(latent_dim, name="mu")
         self.log_var_layer = layers.Dense(latent_dim, name="log_var")
-        # ── Decoder ──
+        #Decoder 
         self.dec1 = layers.Dense(32, activation="relu")
         self.dec_bn1 = layers.BatchNormalization()
         self.dec2 = layers.Dense(64, activation="relu")
@@ -163,8 +160,7 @@ class VAE(keras.Model):
         recon = self.decode(z, training=False)
         recon_err = tf.reduce_mean(tf.square(x - recon), axis=1)
         kl = -0.5 * tf.reduce_mean(
-            1 + log_var - tf.square(mu) - tf.exp(log_var), axis=1
-        )
+            1 + log_var - tf.square(mu) - tf.exp(log_var), axis=1)
         return (recon_err + 0.0001 * kl).numpy()
 
 
@@ -191,15 +187,13 @@ def get_callbacks(model_name):
 
 
 
-# 6. LOAD SAVED AUTOENCODER (training skipped)
-
+# 6 LOAD SAVED AUTOENCODER (training skipped)
 print("\n[4/5] Loading saved Autoencoder...")
 autoencoder = keras.models.load_model("models/autoencoder_final.keras")
 
 
 
-# 7. TRAIN VAE
-
+# 7 TRAIN VAE
 print("\n[5/5] Training VAE...")
 vae_history = vae.fit(
     X_train_pca,
@@ -218,7 +212,6 @@ print("VAE saved → models/vae_weights.weights.h5")
 
 
 # 8 COMPUTE ANOMALY SCORES
-
 print("\nComputing anomaly scores on test set...")
 
 ae_recon = autoencoder.predict(X_test_pca, verbose=0)
@@ -254,7 +247,6 @@ np.save("data/processed/ensemble_scores.npy", ensemble_scores_norm)
 
 
 # 9 PLOT RESULTS
-
 print("\nGenerating plots...")
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 fig.suptitle("AVIRIS-NG — Model Training Results", fontsize=16, fontweight="bold")
@@ -311,7 +303,6 @@ os.makedirs("outputs", exist_ok=True)
 plt.savefig("outputs/03_training.png", dpi=150, bbox_inches="tight")
 plt.show()
 print("Saved → outputs/03_training.png")
-
 
 print("\nModels saved:")
 print("models/autoencoder_final.keras")

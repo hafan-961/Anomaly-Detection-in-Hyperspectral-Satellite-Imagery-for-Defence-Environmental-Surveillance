@@ -19,11 +19,8 @@ BAD_BAND_RANGES = [
     (2450, 2510),  # noisy end of sensor range
 ]
 
-print("=" * 50)
+
 print("STAGE 3 — PREPROCESSING PIPELINE")
-print("=" * 50)
-
-
 #2.loading data
 print("\n[1/6] Loading data...")
 img = envi.open(HDR, DATA)
@@ -32,7 +29,6 @@ rows, cols, n_bands = img.shape
 print(f"Shape: {rows} × {cols} × {n_bands}")
 
 # Load subset for preprocessing
-
 # Using first 1000 rows for speed — enough for training
 print("\n[2/6] Loading 1000 rows into memory...")
 subset = img.read_subregion((0, 1000), (0, cols))
@@ -47,7 +43,7 @@ print(f"Valid pixels:   {np.sum(valid_mask):,}")
 print(f"Invalid pixels: {np.sum(~valid_mask):,}")
 
 
-# 4. removing bad bands (water area)
+# 4 removing bad bands (water area)
 
 print("\n[4/6] Removing water absorption bands...")
 
@@ -93,7 +89,7 @@ print(f"Normalized max: {normalized.max():.4f}")
 print(f"Normalized mean: {normalized.mean():.4f}")
 
 
-# 6.PCA — DIMENSIONALITY REDUCTION
+#6 PCA — DIMENSIONALITY REDUCTION
 print(f"\n[6/6] PCA: {n_good_bands} bands → {N_PCA_COMPONENTS} components...")
 
 pca = PCA(n_components=N_PCA_COMPONENTS, random_state=42)
@@ -108,8 +104,7 @@ print(f"First 5 components explain: {cumulative[4]*100:.2f}%")
 print(f"PCA output shape: {pca_result.shape}")
 
 
-# 7.SAVE PREPROCESSED DATA
-
+# 7  SAVE PREPROCESSED DATA
 print("\nSaving preprocessed data...")
 os.makedirs("data/processed", exist_ok=True)
 
@@ -126,7 +121,7 @@ print("Saved: data/processed/valid_mask.npy")
 print("Saved: data/processed/good_wavelengths.npy")
 
 
-# 8.PLOTING  PREPROCESSING RESULTS
+# 8  PLOTING  PREPROCESSING RESULTS
 
 print("\nGenerating plots...")
 
