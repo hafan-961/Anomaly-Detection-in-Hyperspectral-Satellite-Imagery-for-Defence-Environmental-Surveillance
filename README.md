@@ -117,7 +117,114 @@ Raw AVIRIS-NG L2 ENVI Data (.img + .hdr)
 
 <img width="1280" height="800" alt="PHOTO-2026-05-13-23-26-15" src="https://github.com/user-attachments/assets/ed444b36-4df7-447c-bc80-27ecf1ddd6da" />
 
+---
+## 🛰️ Dataset
+
+**NASA AVIRIS-NG (Airborne Visible/Infrared Imaging Spectrometer — Next Generation)**
+
+| Property | Value |
+|---|---|
+| Source | NASA Jet Propulsion Laboratory |
+| Processing Level | L2 (Surface Reflectance) |
+| Spectral Range | 380 – 2510 nm |
+| Spectral Bands | 425 contiguous bands |
+| Spatial Resolution | ~5 m/pixel |
+| Scene Location | Mississippi River Delta, Louisiana, USA |
+| Access | [NASA Earthdata](https://search.earthdata.nasa.gov/search/granules?p=C2430019879-ORNL_CLOUD&pg[0][v]=f&pg[0][gsk]=-start_date&q=DeltaX_L2_AVIRIS_Reflectance_1988&ac=true) (free, registration required) |
+
+> AVIRIS-NG L2 data is publicly available through NASA Earthdata. you can download from the link above (i have gave direct link but need registered account).
+
 
 ---
+
+## ⚙️ Setup
+
+### Prerequisites
+
+- Python 3.10+
+- 8 GB RAM minimum (16 GB recommended for full-scene processing)
+- For cloud training: AWS SageMaker Studio Lab account (free)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/hafan-961/Anomaly-Detection-in-Hyperspectral-Satellite-Imagery-for-Defence-Environmental-Surveillance.git
+cd Anomaly-Detection-in-Hyperspectral-Satellite-Imagery-for-Defence-Environmental-Surveillance
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### `requirements.txt`
+
+tensorflow>=2.12.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+spectral>=0.23.1
+gdal>=3.6.0
+flask>=2.3.0
+folium>=0.14.0
+matplotlib>=3.7.0
+pandas>=2.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+
+---
+
+### Configuration
+
+Edit `config.yaml` to set your data paths and hyperparameters:
+
+```yaml
+data:
+  scene_1: "data/raw/ang20150420t182808_rfl_v2p9/"
+  scene_2: "data/raw/ang20150423t174831_rfl_v2p9/"
+  pca_components: 30
+
+model:
+  latent_dim: 4
+  epochs: 100
+  batch_size: 512
+  learning_rate: 0.001
+  vae_beta: 0.5           # KL weight
+
+scoring:
+  threshold_precision_floor: 0.85
+
+dashboard:
+  port: 5000
+  debug: false
+```
+
+---
+## FUTURE SCOPE
+
+#### This is not the final project , it needs many improvemnt for defence grade quality , need to train on more and updated dataset and need high computation power to make this happen. so we can take precution before any unfortunate happens.
+---
+
+## 👤 Author
+
+**Muhammed Hafan**  
+B.Tech Computer Science Engineering, Lovely Professional University (2023–2027)
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-muhammed--hafan-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/muhammed-hafan)
+[![LeetCode](https://img.shields.io/badge/LeetCode-Profile-FFA116?style=flat-square&logo=leetcode)](https://leetcode.com/u/ssYdyKjSfq/)
+[![GitHub](https://img.shields.io/badge/GitHub-Portfolio-181717?style=flat-square&logo=github)](https://github.com/hafan-961)
+
+---
+
+
+
+<div align="center">
+
+*Built for the intersection of deep learning and remote sensing — where every pixel tells a story.*
+
+</div>
+
 
 
